@@ -1,0 +1,132 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+
+const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+function fmtShort(d: Date) {
+  return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Group by year
+const byYear = allPosts.reduce<Record<string, typeof allPosts>>((acc, post) => {
+  const year = post.data.date.getFullYear().toString();
+  if (!acc[year]) acc[year] = [];
+  acc[year].push(post);
+  return acc;
+}, {});
+
+const years = Object.keys(byYear).sort((a, b) => Number(b) - Number(a));
+---
+
+<Base title="Writing" description="All posts from anointedgeek.">
+  <div class="writing-index">
+    <h1 class="page-label">writing</h1>
+
+    {years.length === 0 ? (
+      <p class="empty">nothing published yet. first post incoming.</p>
+    ) : (
+      years.map((year, yi) => (
+        <section class="year-group">
+          <h2 class="year-label">{year}</h2>
+          <ul class="post-list">
+            {byYear[year].map((post, pi) => {
+              const isLatest = yi === 0 && pi === 0;
+              return (
+                <li class:list={['post-item', { 'post-item--latest': isLatest }]}>
+                  <a href={`/writing/${post.id}`} class="post-link">
+                    <span class="post-title">{post.data.title}</span>
+                    <time
+                      class="post-date"
+                      datetime={post.data.date.toISOString()}
+                    >
+                      {fmtShort(post.data.date)}
+                    </time>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))
+    )}
+  </div>
+</Base>
+
+<style>
+  .page-label {
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    margin: 0 0 2.5rem;
+  }
+
+  .empty {
+    font-family: var(--mono);
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
+
+  .year-group {
+    margin-bottom: 2.5rem;
+  }
+
+  .year-label {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin: 0 0 0.75rem;
+  }
+
+  .post-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .post-item {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .post-item--latest {
+    border-left: 3px solid var(--accent);
+    padding-left: 0.75rem;
+    margin-left: -0.75rem;
+  }
+
+  .post-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.875rem 0;
+    gap: 1rem;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .post-link:hover .post-title {
+    color: var(--accent);
+  }
+
+  .post-title {
+    font-family: var(--serif);
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.4;
+    transition: color 0.15s ease;
+  }
+
+  .post-date {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+</style>
